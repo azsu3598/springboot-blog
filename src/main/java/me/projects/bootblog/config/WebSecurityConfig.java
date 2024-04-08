@@ -2,10 +2,16 @@ package me.projects.bootblog.config;
 
 
 import lombok.RequiredArgsConstructor;
+import me.projects.bootblog.config.jwt.TokenProvider;
 import me.projects.bootblog.service.UserDetailService;
+import me.projects.bootblog.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -22,10 +28,7 @@ import static org.springframework.boot.autoconfigure.security.servlet.PathReques
 @Configuration
 public class WebSecurityConfig {
 
-
-    private final OAuth2UserCustomService oAuth2UserCustomService;
     private final TokenProvider tokenProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final UserDetailService userDetailService;
 
 
@@ -38,61 +41,64 @@ public class WebSecurityConfig {
     }
 
     // 특정 Http 요청에 대한 웹 기반 보안 구성
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
+//        http
+//                .authorizeHttpRequests((auth) -> auth
+//                        .requestMatchers("/login", "/signup", "/user").permitAll()
+//                        .anyRequest().authenticated()
+//                )
+//                .formLogin((formLogin) -> formLogin
+//                        .loginPage("/login")
+//                        .defaultSuccessUrl("/articles"));
+//
+//        http
+//                .logout((logout) ->
+//                        logout.logoutSuccessUrl("/login")
+//                                .invalidateHttpSession(true)
+//                );
+//
+//        http.csrf((csrf) -> csrf.disable());
+//
+//        return http.build();
+//    }
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .logout(AbstractHttpConfigurer::disable);
-
-        http.sessionManagement(sessionManagement -> sessionManagement
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        http.addFilterBefore(tokenAuth(), UsernamePasswordAuthenticationFilter.class);
-
-        http.authorizeHttpRequests(request -> request
-                .requestMatchers("/api/token").permitAll()
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll());
-
-        http.oauth2Login(oauth2Login -> oauth2Login
+        return http
+                //authorizeRequest() deprecated 오류 해결(링크 : https://sennieworld.tistory.com/109)
+                .authorizeHttpRequests()// 인증 인가 설정
+                .requestMatchers("/login", "/signup", "/user").permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin()// 폼 기반 로그인 설정
                 .loginPage("/login")
-                .authorizationEndpoint(authorizationEndpoint -> authorizationEndpoint
-                        .authorizationRequestRepository(oAuth2AuthorizationRequestBasedOnCookieRepository()))
-                .successHandler(oAuth2SuccessHandler())
-                .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint
-                        .userService(oAuth2UserCustomService)));
-
-        http.logout(logout -> logout
-                .logoutSuccessUrl("/login"));
-
-
-        http.exceptionHandling(exceptionHandling -> exceptionHandling
-                .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                        new AntPathRequestMatcher("/api/**")));
-
-
-        return http.build();
+                .defaultSuccessUrl("/articles")
+                .and()
+                .logout()//로그아웃 설정
+                .logoutSuccessUrl("/login")
+                .invalidateHttpSession(true)
+                .and()
+                .csrf().disable() //csrf 비활성화
+                .build();
     }
 
-    @Bean
-    public OAuth2SuccessHandler oAuth2SuccessHandler() {
-        return new OAuth2SuccessHandler(tokenProvider,
-                refreshTokenRepository,
-                oAuth2AuthorizationRequestBasedOnCookieRepository(),
-                userDetailService
-        );
-    }
-
-    @Bean
-    public TokenAuthenticationFilter tokenAuthenticationFilter() {
-        return new TokenAuthenticationFilter(tokenProvider);
-    }
-
-    @Bean
-    public OAuth2AuthorizationRequestBasedOnCookieRepository oAuth2AuthorizationRequestBasedOnCookieRepository() {
-        return new OAuth2AuthorizationRequestBasedOnCookieRepository();
-    }
+//    @Bean
+//    public DaoAuthenticationProvider daoAuthenticationProvider() throws Exception {
+//        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
+//
+//        daoAuthenticationProvider.setUserDetailsService(userDetailService);
+//        daoAuthenticationProvider.setPasswordEncoder(bCryptPasswordEncoder());
+//
+//        return daoAuthenticationProvider;
+//    }
+@Bean
+public AuthenticationManager authenticationManager(HttpSecurity http, BCryptPasswordEncoder bCryptPasswordEncoder, UserDetailService userDetailService) throws Exception{
+    return http.getSharedObject(AuthenticationManagerBuilder.class)
+            .userDetailsService(userDetailService) // 8. 사용자 정보 서비스 설정
+            .passwordEncoder(bCryptPasswordEncoder)
+            .and()
+            .build();
+}
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {

@@ -15,14 +15,14 @@ import java.util.List;
 
 @Entity
 @Getter
-@Table(name = "user")
+@Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User implements UserDetails { // UserDetails를 상속받아 인증 객체로 사용
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
     private Long id;
-    @Column(name = "email")
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
     @Column(name = "password")
     private String password;
@@ -55,7 +55,7 @@ public class User implements UserDetails { // UserDetails를 상속받아 인증
 
     @Override   // 패스워드 만료 여부 반환
     public boolean isCredentialsNonExpired() {
-        return false;   // true -> 잠금 되지 않음
+        return true;   // true -> 잠금 되지 않음
     }
 
     @Override   // 계정 사용 가능 여부 반환
