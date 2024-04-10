@@ -12,11 +12,12 @@ import me.projects.bootblog.domain.Article;
 public class AddArticleRequest {
     private String title;
     private String content;
-
+    private String author;
     public Article toEntity(){
         return Article.builder()
                 .title(title)
                 .content(content)
+                .author(author)
                 .build();
     }
 }

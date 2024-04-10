@@ -9,8 +9,10 @@ import me.projects.bootblog.dto.UpdateArticleRequest;
 import me.projects.bootblog.service.BlogService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -20,8 +22,8 @@ public class BlogApiController {
 
     @PostMapping("/api/articles")
     //@RequestBody로 요청 본문 값 매핑
-    public ResponseEntity<Article> addArticle(@RequestBody AddArticleRequest request){
-        Article savedArticle = blogService.save(request);
+    public ResponseEntity<Article> addArticle(@RequestBody @Validated AddArticleRequest request, Principal principal){
+        Article savedArticle = blogService.save(request, principal.getName());
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(savedArticle);
