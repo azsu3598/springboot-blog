@@ -3,6 +3,7 @@ package me.projects.bootblog.config;
 import lombok.RequiredArgsConstructor;
 import me.projects.bootblog.config.jwt.TokenProvider;
 import me.projects.bootblog.config.oauth.OAuth2AuthorizationRequestBasedOnCookieRepository;
+import me.projects.bootblog.config.oauth.OAuth2SuccessHandler;
 import me.projects.bootblog.config.oauth.OAuth2UserCustomService;
 import me.projects.bootblog.repository.RefreshTokenRepository;
 import me.projects.bootblog.service.UserService;
