@@ -20,8 +20,10 @@ spring:
             scope:
               - email
               - profile
+
   profiles:
-    active: google
+    active: google, kakao
+
 jwt:
   issuer: test@gmail.com
   secret_key: study-springboot-blog

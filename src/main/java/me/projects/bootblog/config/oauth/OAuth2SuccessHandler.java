@@ -80,4 +80,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .build()
                 .toString();
     }
+    private String getTargetUrl() {
+        return REDIRECT_PATH;
+    }
 }

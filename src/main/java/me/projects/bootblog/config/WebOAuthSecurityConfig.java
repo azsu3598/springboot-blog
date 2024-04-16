@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import me.projects.bootblog.config.jwt.TokenProvider;
 import me.projects.bootblog.config.oauth.OAuth2AuthorizationRequestBasedOnCookieRepository;
 import me.projects.bootblog.config.oauth.OAuth2SuccessHandler;
+import me.projects.bootblog.config.oauth.OAuth2UserCustomKakaoService;
 import me.projects.bootblog.config.oauth.OAuth2UserCustomService;
 import me.projects.bootblog.repository.RefreshTokenRepository;
 import me.projects.bootblog.service.UserService;
@@ -28,6 +29,7 @@ public class WebOAuthSecurityConfig {
     private final TokenProvider tokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserService userService;
+    private final OAuth2UserCustomKakaoService oAuth2UserCustomKakaoService;
 
     @Bean
     public WebSecurityCustomizer configure(){ //스프링 시큐리티 기능 비활성화
@@ -65,6 +67,15 @@ public class WebOAuthSecurityConfig {
                 .successHandler(oAuth2SuccessHandler())
                 .userInfoEndpoint()
                 .userService(oAuth2UserCustomService);
+        http.oauth2Login()
+                .loginPage("/oauth2/callback/kakao")
+                .authorizationEndpoint()
+                // Authorization 요청과 관련된 상태 저장
+                .authorizationRequestRepository(oAuth2AuthorizationRequestBasedOnCookieRepository())
+                .and()
+                .successHandler(oAuth2SuccessHandler())
+                .userInfoEndpoint()
+                .userService(oAuth2UserCustomKakaoService);
 
         http.logout()
                 .logoutSuccessUrl("/login");

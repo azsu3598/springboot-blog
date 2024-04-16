@@ -78,4 +78,9 @@ public class User implements UserDetails { // UserDetails를 상속받아 인증
         this.nickname = nickname;
         return this;
     }
+    @Builder
+    public User(String email, String nickname){
+        this.email = email;
+        this.nickname = nickname;
+    }
 }
