@@ -1,18 +1,32 @@
 package me.projects.bootblog.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.shaded.gson.Gson;
 import com.nimbusds.jose.shaded.gson.JsonObject;
+import me.projects.bootblog.domain.Kakao.KakaoInfo;
+import me.projects.bootblog.dto.KakaoToken;
 import me.projects.bootblog.domain.User;
+import me.projects.bootblog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.beans.Encoder;
+import java.util.UUID;
+
 @Service
 public class KakaoApiService {
+    @Autowired
+    BCryptPasswordEncoder bCryptPasswordEncoder;
+    @Autowired
+    UserRepository userRepository;
 
     public String KakaoGet(String code, String url){
         RestTemplate restTemplate = new RestTemplate();
@@ -32,7 +46,17 @@ public class KakaoApiService {
 
         // POST 요청 보내기
         ResponseEntity<String> responseEntity = restTemplate.postForEntity(url, requestEntity, String.class);
-
+        // Json Simple
+        ObjectMapper objectMapper = new ObjectMapper();
+        KakaoToken kakaoToken = null;
+        try {
+            kakaoToken = objectMapper.readValue(responseEntity.getBody(), KakaoToken.class);
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (JsonProcessingException e){
+            e.printStackTrace();
+        }
+        // 추가내용
         // 응답 처리
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             // 성공적으로 액세스 토큰을 받은 경우
@@ -43,7 +67,7 @@ public class KakaoApiService {
             return null;
         }
     }
-    public String getUserInfo(String token){
+    public KakaoInfo getUserInfo(String token){
         final String KAKAO_API_URL = "https://kapi.kakao.com/v2/user/me";
 
         // HTTP 요청을 보내기 위한 RestTemplate 객체 생성
@@ -52,7 +76,7 @@ public class KakaoApiService {
         // 요청 헤더 구성
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + token);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Content-Type", "application/x-www-form-urlencoded");
 
         // HTTP 요청 객체 생성
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);
@@ -60,12 +84,24 @@ public class KakaoApiService {
         // Kakao API의 /v2/user/me 엔드포인트로 GET 요청 전송
         ResponseEntity<String> responseEntity = restTemplate.exchange(
                 KAKAO_API_URL,
-                HttpMethod.GET,
+                HttpMethod.POST,
                 requestEntity,
                 String.class);
-
+        ObjectMapper objectMapper = new ObjectMapper();
+        KakaoInfo kakaoInfo = null;
+        System.out.println("responseEntity.getBody() = " + responseEntity.getBody());
+        try {
+            kakaoInfo = objectMapper.readValue(responseEntity.getBody(), KakaoInfo.class);
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (JsonProcessingException e){
+            e.printStackTrace();
+        }
+        System.out.println("kakaoInfo.getId() = " + kakaoInfo.getId());
+        System.out.println(kakaoInfo.getProperties());
+        System.out.println("kakaoInfo.getKakao_account().email = " + kakaoInfo.getKakao_account().email);
         // 응답의 본문(body)을 반환
-        return responseEntity.getBody();
+        return kakaoInfo;
     }
 
     public String extractAccessToken(String token) {
@@ -88,6 +124,17 @@ public class KakaoApiService {
         String email = kakaoAccountNode.get("email").asText();
 
         return new User(nickname, email);
+    }
+
+    // 추가
+    public User KakaoUser(KakaoInfo kakaoInfo){
+        UUID garbagePwd = UUID.randomUUID();
+        String enpwd = bCryptPasswordEncoder.encode(garbagePwd.toString());
+        return User.builder()
+                .email(kakaoInfo.getKakao_account().getEmail())
+                .nickname(kakaoInfo.getProperties().getNickname())
+                .password(enpwd)
+                .build();
     }
 
 }
